@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 
+export const runtime = "edge";
+
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const OPENROUTER_MODELS: { key: string; model: string }[] = [
