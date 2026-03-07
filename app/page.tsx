@@ -54,6 +54,7 @@ type StreamChunk = { model: string; content: string; done: boolean };
 
 export default function Home() {
   const [input, setInput] = useState("");
+  const [currentQuestion, setCurrentQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [streamingModels, setStreamingModels] = useState<Set<string>>(new Set());
@@ -63,6 +64,7 @@ export default function Home() {
     const question = input.trim();
     if (!question || isLoading) return;
 
+    setCurrentQuestion(question);
     setIsLoading(true);
     setResponses({});
     setStreamingModels(
@@ -140,6 +142,7 @@ export default function Home() {
     } finally {
       setStreamingModels(new Set());
       setIsLoading(false);
+      setInput("");
     }
   };
 
@@ -164,6 +167,18 @@ export default function Home() {
           思八答 — 一次思考，八次回答 / Think Once, Answer Eight
         </p>
       </header>
+
+      {/* 当前问题展示 */}
+      {currentQuestion && (
+        <div className="shrink-0 mx-auto w-full max-w-6xl px-4 pb-3">
+          <div className="rounded-xl border border-zinc-700/60 bg-zinc-800/50 px-4 py-3">
+            <p className="text-xs font-medium text-zinc-500 mb-1">你的问题</p>
+            <p className="text-sm leading-relaxed text-zinc-200 break-words whitespace-pre-wrap">
+              {currentQuestion}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* AI Grid - 填满可用空间 */}
       <main className="min-h-0 flex-1 px-4 pb-4">
@@ -227,7 +242,11 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入你的问题..."
+              placeholder={
+                Object.keys(responses).length > 0
+                  ? "继续追问 AI思八答"
+                  : "输入你的问题..."
+              }
               rows={3}
               className="min-h-[90px] w-full resize-none break-words whitespace-pre-wrap rounded-2xl border border-zinc-700 bg-zinc-900/80 px-4 py-4 pr-14 pb-14 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
               disabled={isLoading}
