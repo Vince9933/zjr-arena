@@ -20,7 +20,7 @@ const MODELS: ModelConfig[] = [
   { key: "deepseek", model: "deepseek/deepseek-v3.2", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
 
   // --- 国内模型 (直连官方原生接口，速度起飞) ---
-  { key: "kimi", model: "kimi-k2.5", url: "https://api.moonshot.cn/v1/chat/completions", apiKeyEnv: "KIMI_API_KEY" },
+  { key: "minimax", model: "MiniMax-M2.5", url: "https://api.minimaxi.com/v1/chat/completions", apiKeyEnv: "MINIMAX_API_KEY" },
   { key: "qianwen", model: "qwen3.5-flash-2026-02-23", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
   { key: "doubao", model: "doubao-seed-2-0-pro-260215", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
 ];
@@ -65,10 +65,7 @@ function streamAPI(
     stream: true,
   };
 
-  // Kimi：仅 use_search，不传 tools 避免触发需客户端处理的 tool_calls 循环
-  if (config.key === "kimi") {
-    body.use_search = true;
-  }
+  if (config.key === "minimax") body.temperature = 1.0;
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
     // 火山方舟 v3 要求 tools.function，改用 enable_web_search 避免报错
@@ -88,7 +85,7 @@ function streamAPI(
       body: JSON.stringify(body),
     });
 
-  const maxRetries = config.key === "kimi" ? 2 : 0;
+  const maxRetries = 0;
 
   const runWithRetry = async (attempt: number): Promise<void> => {
     const controller = new AbortController();

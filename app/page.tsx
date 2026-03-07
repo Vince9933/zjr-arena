@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 
 const AI_MODELS = [
   ["ChatGPT", "Claude", "Gemini", "Grok"],
-  ["DeepSeek", "豆包", "Kimi", "千问"],
+  ["DeepSeek", "豆包", "MiniMax", "千问"],
 ];
 
 const MODEL_KEY_TO_NAME: Record<string, string> = {
@@ -14,7 +14,7 @@ const MODEL_KEY_TO_NAME: Record<string, string> = {
   grok: "Grok",
   deepseek: "DeepSeek",
   doubao: "豆包",
-  kimi: "Kimi",
+  minimax: "MiniMax",
   qianwen: "千问",
 };
 
@@ -27,7 +27,7 @@ const MODEL_LOGOS: Record<string, string> = {
   Grok: "/logos/grok.png",
   DeepSeek: "/logos/deepseek.png",
   豆包: "/logos/doubao.png",
-  Kimi: "/logos/kimi.png",
+  MiniMax: "/logos/minimax.png",
   千问: "/logos/qianwen.png",
 };
 
