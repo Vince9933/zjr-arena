@@ -65,32 +65,14 @@ function streamAPI(
     stream: true,
   };
 
-  // Kimi 搜索增强：use_search + web_search 工具
+  // Kimi：仅 use_search，不传 tools 避免触发需客户端处理的 tool_calls 循环
   if (config.key === "kimi") {
     body.use_search = true;
-    body.tools = [
-      {
-        type: "function",
-        function: {
-          name: "web_search",
-          description: "Search the web for information",
-          parameters: {
-            type: "object",
-            properties: {
-              query: {
-                type: "string",
-                description: "What to search for",
-              },
-            },
-            required: ["query"],
-          },
-        },
-      },
-    ];
   }
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
-    body.tools = [{ type: "web_search", max_keyword: 5 }];
+    // 火山方舟 v3 要求 tools.function，改用 enable_web_search 避免报错
+    body.enable_web_search = true;
   }
 
   const doFetch = (signal: AbortSignal) =>
