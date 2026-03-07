@@ -2,42 +2,51 @@ import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+// 定义通用的模型配置格式
+type ModelConfig = {
+  key: string;
+  model: string;
+  url: string;
+  apiKeyEnv: string;
+};
 
-const OPENROUTER_MODELS: { key: string; model: string }[] = [
-  { key: "chatgpt", model: "openai/gpt-5-mini" },
-  { key: "claude", model: "anthropic/claude-haiku-4.5" },
-  { key: "gemini", model: "google/gemini-3-flash-preview" },
-  { key: "grok", model: "x-ai/grok-4.1-fast" },
-  { key: "deepseek", model: "deepseek/deepseek-chat" },
-];
+// 🌟 终极点将台：8模同台配置字典
+const MODELS: ModelConfig[] = [
+  // --- 国外模型 (统一走 OpenRouter 代理) ---
+  { key: "chatgpt", model: "openai/gpt-5-mini", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "claude", model: "anthropic/claude-haiku-4.5", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "gemini", model: "google/gemini-3-flash-preview", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "grok", model: "x-ai/grok-4.1-fast", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "deepseek", model: "deepseek/deepseek-chat", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
 
-const MOCK_MODELS: { key: string; displayName: string }[] = [
-  { key: "doubao", displayName: "豆包" },
-  { key: "kimi", displayName: "Kimi" },
-  { key: "qianwen", displayName: "千问" },
+  // --- 国内模型 (直连官方原生接口，速度起飞) ---
+  { key: "kimi", model: "moonshot-v1-8k", url: "https://api.moonshot.cn/v1/chat/completions", apiKeyEnv: "KIMI_API_KEY" },
+  { key: "qianwen", model: "qwen-plus", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
+  { key: "doubao", model: "doubao-1-5-pro-32k-250115", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
 ];
 
 type StreamChunk = { model: string; content: string; done: boolean };
 
-function streamOpenRouter(
+// 核心流式请求函数（现在它支持所有平台了！）
+function streamAPI(
   question: string,
-  modelKey: string,
-  openRouterModel: string,
+  config: ModelConfig,
   send: (chunk: StreamChunk) => void
 ): Promise<void> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  // 根据不同的模型，自动去拿对应的 Key
+  const apiKey = process.env[config.apiKeyEnv];
+
   if (!apiKey || apiKey === "placeholder") {
     send({
-      model: modelKey,
-      content: "请配置 OPENROUTER_API_KEY 后使用",
+      model: config.key,
+      content: `请配置 ${config.apiKeyEnv} 后使用`,
       done: false,
     });
-    send({ model: modelKey, content: "", done: true });
+    send({ model: config.key, content: "", done: true });
     return Promise.resolve();
   }
 
-  return fetch(OPENROUTER_URL, {
+  return fetch(config.url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -46,7 +55,7 @@ function streamOpenRouter(
       "X-Title": "AI Roundtable",
     },
     body: JSON.stringify({
-      model: openRouterModel,
+      model: config.model,
       messages: [{ role: "user" as const, content: question }],
       stream: true,
     }),
@@ -55,17 +64,17 @@ function streamOpenRouter(
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         send({
-          model: modelKey,
+          model: config.key,
           content: `API 错误: ${err?.error?.message ?? res.statusText}`,
           done: false,
         });
-        send({ model: modelKey, content: "", done: true });
+        send({ model: config.key, content: "", done: true });
         return;
       }
 
       const reader = res.body?.getReader();
       if (!reader) {
-        send({ model: modelKey, content: "", done: true });
+        send({ model: config.key, content: "", done: true });
         return;
       }
 
@@ -96,10 +105,10 @@ function streamOpenRouter(
 
                 const content = parsed?.choices?.[0]?.delta?.content;
                 if (typeof content === "string") {
-                  send({ model: modelKey, content, done: false });
+                  send({ model: config.key, content, done: false });
                 }
               } catch {
-                // Ignore parse errors
+                // 忽略解析错误
               }
             }
           }
@@ -108,32 +117,16 @@ function streamOpenRouter(
         reader.releaseLock();
       }
 
-      send({ model: modelKey, content: "", done: true });
+      send({ model: config.key, content: "", done: true });
     })
     .catch((err) => {
       send({
-        model: modelKey,
+        model: config.key,
         content: `请求失败: ${err instanceof Error ? err.message : String(err)}`,
         done: false,
       });
-      send({ model: modelKey, content: "", done: true });
+      send({ model: config.key, content: "", done: true });
     });
-}
-
-function streamMock(
-  modelKey: string,
-  displayName: string,
-  send: (chunk: StreamChunk) => void
-): Promise<void> {
-  const msg = `${displayName}的API尚未接入，敬请期待`;
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      send({ model: modelKey, content: msg, done: false });
-      send({ model: modelKey, content: "", done: true });
-      resolve();
-    }, 1000);
-  });
 }
 
 export async function POST(request: NextRequest) {
@@ -165,14 +158,8 @@ export async function POST(request: NextRequest) {
         );
       };
 
-      const tasks: Promise<void>[] = [
-        ...OPENROUTER_MODELS.map(({ key, model }) =>
-          streamOpenRouter(question, key, model, send)
-        ),
-        ...MOCK_MODELS.map(({ key, displayName }) =>
-          streamMock(key, displayName, send)
-        ),
-      ];
+      // 同时唤醒 8 个模型并开始赛跑！
+      const tasks = MODELS.map((config) => streamAPI(question, config, send));
 
       await Promise.all(tasks);
       controller.close();
