@@ -13,16 +13,16 @@ type ModelConfig = {
 // 🌟 终极点将台：8模同台配置字典
 const MODELS: ModelConfig[] = [
   // --- 国外模型 (统一走 OpenRouter 代理) ---
-  { key: "chatgpt", model: "openai/gpt-5-mini", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
-  { key: "claude", model: "anthropic/claude-haiku-4.5", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
-  { key: "gemini", model: "google/gemini-3-flash-preview", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "chatgpt", model: "openai/gpt-5.4", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "claude", model: "anthropic/claude-sonnet-4.6", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "gemini", model: "google/gemini-3.1-flash-lite-preview", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
   { key: "grok", model: "x-ai/grok-4.1-fast", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
-  { key: "deepseek", model: "deepseek/deepseek-chat", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
+  { key: "deepseek", model: "deepseek/deepseek-v3.2", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
 
   // --- 国内模型 (直连官方原生接口，速度起飞) ---
-  { key: "kimi", model: "moonshot-v1-8k", url: "https://api.moonshot.cn/v1/chat/completions", apiKeyEnv: "KIMI_API_KEY" },
-  { key: "qianwen", model: "qwen-plus", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
-  { key: "doubao", model: "doubao-1-5-pro-32k-250115", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
+  { key: "kimi", model: "kimi-k2.5", url: "https://api.moonshot.cn/v1/chat/completions", apiKeyEnv: "KIMI_API_KEY" },
+  { key: "qianwen", model: "qwen-max-2026-0", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
+  { key: "doubao", model: "doubao-2.0-pro-32k", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
 ];
 
 type StreamChunk = { model: string; content: string; done: boolean };
