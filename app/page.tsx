@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 
 const AI_MODELS = [
   ["ChatGPT", "Claude", "Gemini", "Grok"],
-  ["DeepSeek", "豆包", "智谱 GLM-4.7", "千问"],
+  ["DeepSeek", "豆包", "智谱", "千问"],
 ];
 
 const MODEL_KEY_TO_NAME: Record<string, string> = {
@@ -14,7 +14,7 @@ const MODEL_KEY_TO_NAME: Record<string, string> = {
   grok: "Grok",
   deepseek: "DeepSeek",
   doubao: "豆包",
-  zhipu: "智谱 GLM-4.7",
+  zhipu: "智谱",
   qianwen: "千问",
 };
 
@@ -27,7 +27,7 @@ const MODEL_LOGOS: Record<string, string> = {
   Grok: "/logos/grok.png",
   DeepSeek: "/logos/deepseek.png",
   豆包: "/logos/doubao.png",
-  "智谱 GLM-4.7": "/logos/zhipu.png",
+  智谱: "/logos/zhipu.png",
   千问: "/logos/qianwen.png",
 };
 
@@ -250,7 +250,7 @@ export default function Home() {
                 ) : (
                   <img
                     src={MODEL_LOGOS[name]}
-                    alt={name === "智谱 GLM-4.7" ? "Zhipu" : ""}
+                    alt={name === "智谱" ? "Zhipu" : ""}
                     width={16}
                     height={16}
                     className="h-4 w-4 object-contain"
@@ -301,7 +301,7 @@ export default function Home() {
                   ) : (
                     <img
                       src={MODEL_LOGOS[model]}
-                      alt={model === "智谱 GLM-4.7" ? "Zhipu" : `${model} logo`}
+                      alt={model === "智谱" ? "Zhipu" : `${model} logo`}
                       width={24}
                       height={24}
                       className="h-6 w-6 object-contain"
