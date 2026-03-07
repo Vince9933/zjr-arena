@@ -57,7 +57,7 @@ function streamAPI(
     {
       role: "system",
       content:
-        "当前实时时间是 2026 年 3 月 7 日。请务必使用你的联网搜索工具来获取最新资讯，确保回答具备时效性。",
+        "当前实时时间是 2026 年 3 月 7 日。如果你具备联网工具，请务必通过搜索获取最新信息来回答用户，确保信息的准确性和时效性。",
     },
     { role: "user", content: question },
   ];
@@ -67,9 +67,52 @@ function streamAPI(
     messages,
     stream: true,
   };
-  if (config.key === "kimi") body.use_search = true;
+  if (config.key === "kimi") {
+    body.use_search = true;
+    body.tools = [
+      {
+        type: "function",
+        function: {
+          name: "web_search",
+          description: "Search the web for information",
+          parameters: {
+            type: "object",
+            properties: {
+              classes: {
+                description:
+                  "Search domains to focus on. Defaults to 'all' if not specified.",
+                items: {
+                  enum: [
+                    "all",
+                    "academic",
+                    "social",
+                    "library",
+                    "finance",
+                    "code",
+                    "ecommerce",
+                    "medical",
+                  ],
+                  type: "string",
+                },
+                type: "array",
+              },
+              query: {
+                description: "What to search for",
+                type: "string",
+              },
+            },
+            required: ["query"],
+          },
+        },
+      },
+    ];
+  }
   if (config.key === "qianwen") body.enable_search = true;
-  if (config.key === "doubao") body.enable_web_search = true;
+  if (config.key === "doubao") {
+    body.tools = [
+      { type: "web_search", max_keyword: 5 },
+    ];
+  }
 
   return fetch(config.url, {
     method: "POST",
