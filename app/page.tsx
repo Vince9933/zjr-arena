@@ -18,6 +18,8 @@ const MODEL_KEY_TO_NAME: Record<string, string> = {
   qianwen: "千问",
 };
 
+const ALL_MODEL_KEYS = Object.keys(MODEL_KEY_TO_NAME) as string[];
+
 const MODEL_LOGOS: Record<string, string> = {
   ChatGPT: "/logos/chatgpt.png",
   Claude: "/logos/claude.png",
@@ -55,33 +57,56 @@ type StreamChunk = { model: string; content: string; done: boolean };
 export default function Home() {
   const [input, setInput] = useState("");
   const [currentQuestion, setCurrentQuestion] = useState("");
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set(ALL_MODEL_KEYS));
   const [isLoading, setIsLoading] = useState(false);
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [streamingModels, setStreamingModels] = useState<Set<string>>(new Set());
   const [failedLogos, setFailedLogos] = useState<Set<string>>(new Set());
 
+  const selectedModels = ALL_MODEL_KEYS.filter((k) => selectedKeys.has(k)).map((k) => MODEL_KEY_TO_NAME[k]);
+  const canToggleOff = selectedKeys.size > 1;
+  const canToggleOn = selectedKeys.size < 8;
+
+  const toggleModel = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        if (next.size <= 1) return prev;
+        next.delete(key);
+      } else {
+        if (next.size >= 8) return prev;
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const handleSend = async () => {
     const question = input.trim();
-    if (!question || isLoading) return;
+    if (!question || isLoading || selectedModels.length < 1) return;
 
     setCurrentQuestion(question);
     setIsLoading(true);
     setResponses({});
-    setStreamingModels(
-      new Set(AI_MODELS.flat().map((m) => m))
-    );
+    setStreamingModels(new Set(selectedModels));
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({
+          question,
+          models: selectedModels.map((name) => {
+            const entry = Object.entries(MODEL_KEY_TO_NAME).find(([, v]) => v === name);
+            return entry?.[0] ?? "";
+          }).filter(Boolean),
+        }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         const msg = err?.error ?? "请求失败";
-        AI_MODELS.flat().forEach((model) => {
+        selectedModels.forEach((model) => {
           setResponses((prev) => ({ ...prev, [model]: msg }));
         });
         setStreamingModels(new Set());
@@ -93,6 +118,11 @@ export default function Home() {
         setStreamingModels(new Set());
         return;
       }
+
+      const selectedKeysArr = selectedModels.map((name) => {
+        const entry = Object.entries(MODEL_KEY_TO_NAME).find(([, v]) => v === name);
+        return entry?.[0];
+      }).filter(Boolean) as string[];
 
       const decoder = new TextDecoder();
       let buffer = "";
@@ -114,7 +144,7 @@ export default function Home() {
             try {
               const chunk: StreamChunk = JSON.parse(block.slice(6));
               const modelName = MODEL_KEY_TO_NAME[chunk.model];
-              if (!modelName) continue;
+              if (!modelName || !selectedKeysArr.includes(chunk.model)) continue;
 
               if (chunk.done) {
                 setStreamingModels((prev) => {
@@ -136,7 +166,7 @@ export default function Home() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "请求失败";
-      AI_MODELS.flat().forEach((model) => {
+      selectedModels.forEach((model) => {
         setResponses((prev) => ({ ...prev, [model]: msg }));
       });
     } finally {
@@ -168,6 +198,49 @@ export default function Home() {
         </p>
       </header>
 
+      {/* 模型选择开关 */}
+      <div className="shrink-0 mx-auto w-full max-w-6xl px-4 pb-3">
+        <p className="text-xs text-zinc-500 mb-2 text-center">选择参与回答的模型（1-8 个）</p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {ALL_MODEL_KEYS.map((key) => {
+            const name = MODEL_KEY_TO_NAME[key];
+            const isOn = selectedKeys.has(key);
+            const disabledOff = isOn && !canToggleOff;
+            const disabledOn = !isOn && !canToggleOn;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleModel(key)}
+                disabled={isOn ? disabledOff : disabledOn}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                  isOn
+                    ? "bg-zinc-100 text-zinc-900 hover:bg-zinc-200"
+                    : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+                } ${(isOn ? disabledOff : disabledOn) ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                {failedLogos.has(name) ? (
+                  <span
+                    className={`h-4 w-4 rounded-full text-xs font-medium text-white flex items-center justify-center ${getFallbackColor(name)}`}
+                  >
+                    {getFirstChar(name)}
+                  </span>
+                ) : (
+                  <img
+                    src={MODEL_LOGOS[name]}
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="h-4 w-4 object-contain"
+                  />
+                )}
+                <span>{name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 当前问题展示 */}
       {currentQuestion && (
         <div className="shrink-0 mx-auto w-full max-w-6xl px-4 pb-3">
@@ -180,10 +253,16 @@ export default function Home() {
         </div>
       )}
 
-      {/* AI Grid - 填满可用空间 */}
+      {/* AI Grid - 只显示选中的模型 */}
       <main className="min-h-0 flex-1 px-4 pb-4">
-        <div className="mx-auto grid h-full min-h-[500px] grid-cols-1 grid-rows-8 gap-5 sm:grid-cols-2 sm:grid-rows-4 lg:grid-cols-4 lg:grid-rows-2">
-          {AI_MODELS.flat().map((model) => (
+        <div
+          className={`mx-auto grid h-full min-h-[500px] gap-5 ${
+            selectedModels.length === 1
+              ? "grid-cols-1 max-w-2xl"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+          }`}
+        >
+          {selectedModels.map((model) => (
             <div
               key={model}
               className="flex min-h-[220px] flex-col rounded-xl border border-zinc-700/60 bg-zinc-900/50 p-4 transition-colors hover:border-zinc-600/80"
@@ -253,7 +332,7 @@ export default function Home() {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || selectedModels.length < 1}
               className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-900 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="发送"
             >

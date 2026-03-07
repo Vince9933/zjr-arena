@@ -21,8 +21,8 @@ const MODELS: ModelConfig[] = [
 
   // --- 国内模型 (直连官方原生接口，速度起飞) ---
   { key: "kimi", model: "kimi-k2.5", url: "https://api.moonshot.cn/v1/chat/completions", apiKeyEnv: "KIMI_API_KEY" },
-  { key: "qianwen", model: "qwen-max-2026-0", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
-  { key: "doubao", model: "doubao-2.0-pro-32k", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
+  { key: "qianwen", model: "qwen3.5-flash-2026-02-23", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
+  { key: "doubao", model: "doubao-seed-2-0-pro-260215", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
 ];
 
 type StreamChunk = { model: string; content: string; done: boolean };
@@ -131,9 +131,11 @@ function streamAPI(
 
 export async function POST(request: NextRequest) {
   let question: string;
+  let modelKeys: string[] | undefined;
   try {
     const body = await request.json();
     question = typeof body?.question === "string" ? body.question : "";
+    modelKeys = Array.isArray(body?.models) ? body.models : undefined;
   } catch {
     return new Response(
       JSON.stringify({ error: "Invalid request body" }),
@@ -148,6 +150,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // 可选：只请求指定的模型 key 列表（1-8 个）
+  const keysToUse =
+    modelKeys &&
+    modelKeys.length >= 1 &&
+    modelKeys.length <= 8
+      ? modelKeys
+      : MODELS.map((m) => m.key);
+  const modelsToUse = MODELS.filter((m) => keysToUse.includes(m.key));
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -158,8 +169,7 @@ export async function POST(request: NextRequest) {
         );
       };
 
-      // 同时唤醒 8 个模型并开始赛跑！
-      const tasks = MODELS.map((config) => streamAPI(question, config, send));
+      const tasks = modelsToUse.map((config) => streamAPI(question, config, send));
 
       await Promise.all(tasks);
       controller.close();
