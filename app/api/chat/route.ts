@@ -49,6 +49,28 @@ function streamAPI(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 45000);
 
+  // OpenRouter 联网：model 追加 :online 后缀
+  const isOpenRouter = config.url.includes("openrouter.ai");
+  const effectiveModel = isOpenRouter ? `${config.model}:online` : config.model;
+
+  const messages: Array<{ role: "system" | "user"; content: string }> = [
+    {
+      role: "system",
+      content:
+        "当前实时时间是 2026 年 3 月 7 日。请务必使用你的联网搜索工具来获取最新资讯，确保回答具备时效性。",
+    },
+    { role: "user", content: question },
+  ];
+
+  const body: Record<string, unknown> = {
+    model: effectiveModel,
+    messages,
+    stream: true,
+  };
+  if (config.key === "kimi") body.use_search = true;
+  if (config.key === "qianwen") body.enable_search = true;
+  if (config.key === "doubao") body.enable_web_search = true;
+
   return fetch(config.url, {
     method: "POST",
     signal: controller.signal,
@@ -58,11 +80,7 @@ function streamAPI(
       "HTTP-Referer": "https://zjr.ai",
       "X-Title": "AI Roundtable",
     },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [{ role: "user" as const, content: question }],
-      stream: true,
-    }),
+    body: JSON.stringify(body),
   })
     .then(async (res) => {
       clearTimeout(timeoutId);
