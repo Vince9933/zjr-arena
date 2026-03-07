@@ -68,21 +68,24 @@ npm run preview
 
 3. 部署完成后会输出访问 URL，形如：`https://zjr-arena.xxx.workers.dev`
 
-### 方式 B：Git 自动部署（推荐，适合 Windows）
+### 方式 B：Workers Builds（Git 自动部署，推荐）
 
-通过 Cloudflare 连接 Git 仓库，在云端构建，可避免 Windows 本地构建问题：
+通过 Cloudflare Workers Builds 连接 Git，在云端 Linux 环境构建，避免 Windows 本地问题：
 
-1. 将代码推送到 GitHub/GitLab
-2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
-3. Workers & Pages → Create → Connect to Git
-4. 选择仓库 `zjr-arena`
-5. 配置构建设置：
-   - **Framework preset**: Next.js (OpenNext)
-   - **Build command**: `npm run build && npx opennextjs-cloudflare build`
-   - **Build output directory**: `.open-next`
-   - **Root directory**: `/`（若项目在仓库根目录）
-6. 在 Environment variables 中添加 `OPENROUTER_API_KEY`
-7. 保存并部署
+1. 将代码推送到 GitHub
+2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com) → Workers & Pages
+3. Create Worker → Connect to Git → 选择仓库
+4. 在 **Settings → Build** 中配置：
+
+   | 设置项 | 值 |
+   |--------|-----|
+   | **Build command** | `npx opennextjs-cloudflare build` |
+   | **Deploy command** | `npx wrangler deploy` |
+   | **Root directory** | 留空（项目在根目录时） |
+
+5. 在 **Build variables and secrets** 中添加 `OPENROUTER_API_KEY`（构建时可能需要）
+6. 在 Worker 的 **Settings → Variables** 中添加 `OPENROUTER_API_KEY`（运行时使用）
+7. 保存后推送代码触发构建
 
 ## 五、自定义域名
 
@@ -116,8 +119,15 @@ npm run preview
    ```
 3. 若仍失败，使用 **Git 部署**（在 Cloudflare 的 Linux 环境构建）
 
+### 构建失败（build command exited with code: 1）
+
+1. **查看完整日志**：在 Cloudflare 构建日志中向上滚动，找到红色错误信息（如 npm 报错、OpenNext 报错）
+2. **检查 Build command**：必须是 `npx opennextjs-cloudflare build`，不能是 `npm run build`
+3. **检查环境变量**：在 Build variables 中添加 `OPENROUTER_API_KEY`（若构建时需要）
+4. **检查 Node 版本**：Workers Builds 默认 Node 18+，应兼容
+
 ### 其他
 
-- **API 报错**：确认 `OPENROUTER_API_KEY` 已在 Cloudflare 中正确配置
+- **API 报错**：确认 `OPENROUTER_API_KEY` 已在 Worker 的 Variables 中配置
 - **构建失败**：确保 `wrangler` 版本 ≥ 3.99.0
 - **区域限制**：部署到 Cloudflare 后，请求从边缘节点发出，通常可避免「not available in your region」问题
