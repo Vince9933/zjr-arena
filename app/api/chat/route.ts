@@ -169,9 +169,10 @@ export async function POST(request: NextRequest) {
         );
       };
 
-      const tasks = modelsToUse.map((config) => streamAPI(question, config, send));
-
-      await Promise.all(tasks);
+      // 顺序执行避免多路流式响应混在一起导致模型错配
+      for (const config of modelsToUse) {
+        await streamAPI(question, config, send);
+      }
       controller.close();
     },
   });
