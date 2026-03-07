@@ -71,26 +71,10 @@ function streamAPI(
 
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "zhipu") {
-    // 智谱官方「对话中的网络搜索」格式，见 docs.bigmodel.cn
-    body.tools = [
-      {
-        type: "web_search",
-        web_search: {
-          enable: true,
-          search_engine: "search_pro",
-          search_result: true,
-          search_prompt:
-            "请用简洁的语言总结网络搜索{search_result}中的关键信息，按重要性排序并引用来源。当前日期是 2026 年 3 月 7 日。",
-          count: 10,
-          search_recency_filter: "noLimit",
-          content_size: "high",
-        },
-      },
-    ];
-    body.tool_choice = "auto";
     body.thinking = { type: "enabled" };
+    // 火山方舟 v3 要求 tools.function，智谱 web_search 格式不兼容，暂不传 tools
   }
-  // 豆包：不传 tools、enable_web_search，避免输出 <|FunctionCallBegin|> 等底层代码
+  // 豆包、智谱（火山接入）：不传 tools，避免 missing tools.function 报错
 
   const doFetch = (signal: AbortSignal) =>
     fetch(config.url, {
