@@ -197,14 +197,14 @@ export default function Home() {
                 </div>
                 {model}
               </div>
-              <div className="min-h-[180px] flex-1 text-sm leading-relaxed text-zinc-300">
+              <div className="min-h-[180px] flex-1 break-words text-sm leading-relaxed text-zinc-300">
                 {streamingModels.has(model) && !responses[model] ? (
                   <span className="inline-flex items-center gap-2 text-zinc-500">
                     <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-500" />
                     思考中...
                   </span>
                 ) : responses[model] ? (
-                  <span>
+                  <span className="break-words">
                     {responses[model]}
                     {streamingModels.has(model) && (
                       <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-zinc-400" />
@@ -229,7 +229,7 @@ export default function Home() {
               onKeyDown={handleKeyDown}
               placeholder="输入你的问题..."
               rows={3}
-              className="min-h-[90px] w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900/80 px-4 py-4 pr-14 pb-14 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
+              className="min-h-[90px] w-full resize-none break-words whitespace-pre-wrap rounded-2xl border border-zinc-700 bg-zinc-900/80 px-4 py-4 pr-14 pb-14 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
               disabled={isLoading}
             />
             <button
