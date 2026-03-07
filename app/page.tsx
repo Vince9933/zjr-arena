@@ -197,14 +197,14 @@ export default function Home() {
                 </div>
                 {model}
               </div>
-              <div className="min-h-[180px] flex-1 break-words text-sm leading-relaxed text-zinc-300">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden break-words whitespace-pre-wrap rounded-lg px-2 py-3 text-sm leading-6 text-zinc-300">
                 {streamingModels.has(model) && !responses[model] ? (
                   <span className="inline-flex items-center gap-2 text-zinc-500">
                     <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-500" />
                     思考中...
                   </span>
                 ) : responses[model] ? (
-                  <span className="break-words">
+                  <span className="block break-words whitespace-pre-wrap">
                     {responses[model]}
                     {streamingModels.has(model) && (
                       <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-zinc-400" />
