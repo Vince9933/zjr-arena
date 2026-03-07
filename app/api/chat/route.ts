@@ -49,11 +49,11 @@ function streamAPI(
   const isOpenRouter = config.url.includes("openrouter.ai");
   const effectiveModel = isOpenRouter ? `${config.model}:online` : config.model;
 
-  // 豆包、智谱：取消假联网，强制入戏，禁止 XML/工具调用输出
+  // 豆包：取消假联网；智谱：已配置 web_search 工具，可联网
   const basePrompt =
     "当前是 2026 年 3 月 7 日。如果用户询问当下的最新情况，请结合你现有的知识进行最合理的逻辑推演和情景模拟。绝对禁止输出任何 XML 标签、禁止说'我无法预知未来'、禁止提及你的知识库截止时间。你必须直接给出一个符合 2026 年设定的答案。";
   const systemContent =
-    config.key === "doubao" || config.key === "zhipu"
+    config.key === "doubao"
       ? basePrompt
       : basePrompt +
         " 请务必优先调用联网搜索工具来获取当下的最新资讯（如洛阳本地新闻、AI 政策等），确保回答的时效性。";
@@ -70,7 +70,27 @@ function streamAPI(
   };
 
   if (config.key === "qianwen") body.enable_search = true;
-  // 豆包、智谱：不传 tools、enable_web_search，避免输出 <|FunctionCallBegin|> 等底层代码
+  if (config.key === "zhipu") {
+    // 智谱官方「对话中的网络搜索」格式，见 docs.bigmodel.cn
+    body.tools = [
+      {
+        type: "web_search",
+        web_search: {
+          enable: true,
+          search_engine: "search_pro",
+          search_result: true,
+          search_prompt:
+            "请用简洁的语言总结网络搜索{search_result}中的关键信息，按重要性排序并引用来源。当前日期是 2026 年 3 月 7 日。",
+          count: 10,
+          search_recency_filter: "noLimit",
+          content_size: "high",
+        },
+      },
+    ];
+    body.tool_choice = "auto";
+    body.thinking = { type: "enabled" };
+  }
+  // 豆包：不传 tools、enable_web_search，避免输出 <|FunctionCallBegin|> 等底层代码
 
   const doFetch = (signal: AbortSignal) =>
     fetch(config.url, {
