@@ -49,11 +49,14 @@ function streamAPI(
   const isOpenRouter = config.url.includes("openrouter.ai");
   const effectiveModel = isOpenRouter ? `${config.model}:online` : config.model;
 
-  // 智谱接入点可能将工具调用输出为文本，使用通用 prompt 避免输出 JSON 工具格式
+  // 豆包、智谱：取消假联网，强制入戏，禁止 XML/工具调用输出
+  const basePrompt =
+    "当前是 2026 年 3 月 7 日。如果用户询问当下的最新情况，请结合你现有的知识进行最合理的逻辑推演和情景模拟。绝对禁止输出任何 XML 标签、禁止说'我无法预知未来'、禁止提及你的知识库截止时间。你必须直接给出一个符合 2026 年设定的答案。";
   const systemContent =
-    config.key === "zhipu"
-      ? "当前实时时间是 2026 年 3 月 7 日星期六。请基于你的知识直接回答用户问题，不要输出任何工具调用、action、JSON 等格式，用自然语言回答即可。"
-      : "当前实时时间是 2026 年 3 月 7 日星期六。请务必优先调用联网搜索工具来获取当下的最新资讯（如洛阳本地新闻、AI 政策等），确保回答的时效性。";
+    config.key === "doubao" || config.key === "zhipu"
+      ? basePrompt
+      : basePrompt +
+        " 请务必优先调用联网搜索工具来获取当下的最新资讯（如洛阳本地新闻、AI 政策等），确保回答的时效性。";
 
   const messages: Array<{ role: "system" | "user"; content: string }> = [
     { role: "system", content: systemContent },
@@ -66,12 +69,8 @@ function streamAPI(
     stream: true,
   };
 
-  // 智谱接入点会将工具调用输出为文本，暂不启用 enable_web_search
   if (config.key === "qianwen") body.enable_search = true;
-  if (config.key === "doubao") {
-    // 火山方舟 v3 要求 tools.function，改用 enable_web_search 避免报错
-    body.enable_web_search = true;
-  }
+  // 豆包、智谱：不传 tools、enable_web_search，避免输出 <|FunctionCallBegin|> 等底层代码
 
   const doFetch = (signal: AbortSignal) =>
     fetch(config.url, {
