@@ -69,49 +69,15 @@ function streamAPI(
   };
   if (config.key === "kimi") {
     body.use_search = true;
+    // 使用官方 builtin_function 格式，API 会服务端执行搜索
     body.tools = [
-      {
-        type: "function",
-        function: {
-          name: "web_search",
-          description: "Search the web for information",
-          parameters: {
-            type: "object",
-            properties: {
-              classes: {
-                description:
-                  "Search domains to focus on. Defaults to 'all' if not specified.",
-                items: {
-                  enum: [
-                    "all",
-                    "academic",
-                    "social",
-                    "library",
-                    "finance",
-                    "code",
-                    "ecommerce",
-                    "medical",
-                  ],
-                  type: "string",
-                },
-                type: "array",
-              },
-              query: {
-                description: "What to search for",
-                type: "string",
-              },
-            },
-            required: ["query"],
-          },
-        },
-      },
+      { type: "builtin_function", function: { name: "$web_search" } },
     ];
   }
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
-    body.tools = [
-      { type: "web_search", max_keyword: 5 },
-    ];
+    // 火山方舟 v3 需 tools.function 格式，或直接用 enable_web_search
+    body.enable_web_search = true;
   }
 
   return fetch(config.url, {

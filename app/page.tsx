@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 const AI_MODELS = [
   ["ChatGPT", "Claude", "Gemini", "Grok"],
@@ -50,6 +50,28 @@ function getFallbackColor(model: string): string {
 
 function getFirstChar(model: string): string {
   return model.charAt(0);
+}
+
+/** 将文本中的 URL 转为可点击链接 */
+function renderContentWithLinks(text: string): ReactNode {
+  const urlRegex = /(https?:\/\/[^\s)\]>\<]+)/g;
+  const parts = text.split(urlRegex);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    part.startsWith("http://") || part.startsWith("https://") ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-400 hover:underline break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
 }
 
 type StreamChunk = { model: string; content: string; done: boolean };
@@ -299,7 +321,7 @@ export default function Home() {
                   </span>
                 ) : responses[model] ? (
                   <span className="block break-words whitespace-pre-wrap">
-                    {responses[model]}
+                    {renderContentWithLinks(responses[model])}
                     {streamingModels.has(model) && (
                       <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-zinc-400" />
                     )}
