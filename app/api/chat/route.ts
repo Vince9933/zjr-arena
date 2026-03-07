@@ -20,7 +20,7 @@ const MODELS: ModelConfig[] = [
   { key: "deepseek", model: "deepseek/deepseek-v3.2", url: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY" },
 
   // --- 国内模型 (直连官方原生接口，速度起飞) ---
-  { key: "minimax", model: "MiniMax-M2.5", url: "https://api.minimaxi.com/v1/chat/completions", apiKeyEnv: "MINIMAX_API_KEY" },
+  { key: "zhipu", model: "ep-20260307171431-zskkn", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
   { key: "qianwen", model: "qwen3.5-flash-2026-02-23", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
   { key: "doubao", model: "doubao-seed-2-0-pro-260215", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
 ];
@@ -65,7 +65,9 @@ function streamAPI(
     stream: true,
   };
 
-  if (config.key === "minimax") body.temperature = 1.0;
+  if (config.key === "zhipu") {
+    body.tools = [{ type: "web_search", max_keyword: 3 }];
+  }
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
     // 火山方舟 v3 要求 tools.function，改用 enable_web_search 避免报错
