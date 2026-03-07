@@ -27,7 +27,7 @@ const MODEL_LOGOS: Record<string, string> = {
   Grok: "/logos/grok.png",
   DeepSeek: "/logos/deepseek.png",
   豆包: "/logos/doubao.png",
-  "智谱 GLM-4.7": "/zhipu.png",
+  "智谱 GLM-4.7": "/logos/zhipu.png",
   千问: "/logos/qianwen.png",
 };
 

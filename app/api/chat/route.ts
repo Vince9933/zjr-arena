@@ -23,8 +23,7 @@ const MODELS: ModelConfig[] = [
   { key: "zhipu", model: "ep-20260307171431-zskkn", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
   { key: "qianwen", model: "qwen3.5-flash-2026-02-23", url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", apiKeyEnv: "QWEN_API_KEY" },
   { key: "doubao", model: "doubao-seed-2-0-pro-260215", url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", apiKeyEnv: "DOUBAO_API_KEY" },
-];
-
+]
 type StreamChunk = { model: string; content: string; done: boolean };
 
 // 核心流式请求函数（现在它支持所有平台了！）
@@ -66,7 +65,8 @@ function streamAPI(
   };
 
   if (config.key === "zhipu") {
-    body.tools = [{ type: "web_search", max_keyword: 3 }];
+    // 火山方舟 v3 要求 tools.function，改用 enable_web_search
+    body.enable_web_search = true;
   }
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
