@@ -46,8 +46,12 @@ function streamAPI(
     return Promise.resolve();
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+
   return fetch(config.url, {
     method: "POST",
+    signal: controller.signal,
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -61,6 +65,7 @@ function streamAPI(
     }),
   })
     .then(async (res) => {
+      clearTimeout(timeoutId);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         send({
@@ -103,7 +108,10 @@ function streamAPI(
                 const parsed = JSON.parse(data);
                 if (parsed?.error) break;
 
-                const content = parsed?.choices?.[0]?.delta?.content;
+                // OpenAI 格式: choices[0].delta.content；火山方舟等: delta.content
+                const content =
+                  parsed?.choices?.[0]?.delta?.content ??
+                  parsed?.delta?.content;
                 if (typeof content === "string") {
                   send({ model: config.key, content, done: false });
                 }
@@ -120,9 +128,16 @@ function streamAPI(
       send({ model: config.key, content: "", done: true });
     })
     .catch((err) => {
+      clearTimeout(timeoutId);
+      const msg =
+        err?.name === "AbortError"
+          ? "请求超时（45秒），请检查网络或 API 配置"
+          : err instanceof Error
+            ? err.message
+            : String(err);
       send({
         model: config.key,
-        content: `请求失败: ${err instanceof Error ? err.message : String(err)}`,
+        content: `请求失败: ${msg}`,
         done: false,
       });
       send({ model: config.key, content: "", done: true });
@@ -169,10 +184,8 @@ export async function POST(request: NextRequest) {
         );
       };
 
-      // 顺序执行避免多路流式响应混在一起导致模型错配
-      for (const config of modelsToUse) {
-        await streamAPI(question, config, send);
-      }
+      // 并行执行，8 个模型同时请求，每个 chunk 带 model 标识前端会正确分发
+      await Promise.all(modelsToUse.map((config) => streamAPI(question, config, send)));
       controller.close();
     },
   });
