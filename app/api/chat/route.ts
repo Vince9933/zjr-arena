@@ -46,19 +46,16 @@ function streamAPI(
     return Promise.resolve();
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
-
   // OpenRouter 联网：model 追加 :online 后缀
   const isOpenRouter = config.url.includes("openrouter.ai");
   const effectiveModel = isOpenRouter ? `${config.model}:online` : config.model;
 
+  // 统一 System Prompt：全模型联网搜索优先
+  const systemContent =
+    "当前实时时间是 2026 年 3 月 7 日星期六。请务必优先调用联网搜索工具来获取当下的最新资讯（如洛阳本地新闻、AI 政策等），确保回答的时效性。";
+
   const messages: Array<{ role: "system" | "user"; content: string }> = [
-    {
-      role: "system",
-      content:
-        "当前实时时间是 2026 年 3 月 7 日。如果你具备联网工具，请务必通过搜索获取最新信息来回答用户，确保信息的准确性和时效性。",
-    },
+    { role: "system", content: systemContent },
     { role: "user", content: question },
   ];
 
@@ -67,39 +64,63 @@ function streamAPI(
     messages,
     stream: true,
   };
+
+  // Kimi 搜索增强：use_search + web_search 工具
   if (config.key === "kimi") {
     body.use_search = true;
-    // 使用官方 builtin_function 格式，API 会服务端执行搜索
     body.tools = [
-      { type: "builtin_function", function: { name: "$web_search" } },
+      {
+        type: "function",
+        function: {
+          name: "web_search",
+          description: "Search the web for information",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "What to search for",
+              },
+            },
+            required: ["query"],
+          },
+        },
+      },
     ];
   }
   if (config.key === "qianwen") body.enable_search = true;
   if (config.key === "doubao") {
-    // 火山方舟 v3 需 tools.function 格式，或直接用 enable_web_search
-    body.enable_web_search = true;
+    body.tools = [{ type: "web_search", max_keyword: 5 }];
   }
 
-  return fetch(config.url, {
-    method: "POST",
-    signal: controller.signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://zjr.ai",
-      "X-Title": "AI Roundtable",
-    },
-    body: JSON.stringify(body),
-  })
-    .then(async (res) => {
+  const doFetch = (signal: AbortSignal) =>
+    fetch(config.url, {
+      method: "POST",
+      signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://zjr.ai",
+        "X-Title": "AI Roundtable",
+      },
+      body: JSON.stringify(body),
+    });
+
+  const maxRetries = config.key === "kimi" ? 2 : 0;
+
+  const runWithRetry = async (attempt: number): Promise<void> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    try {
+      const res = await doFetch(controller.signal);
       clearTimeout(timeoutId);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        send({
-          model: config.key,
-          content: `API 错误: ${err?.error?.message ?? res.statusText}`,
-          done: false,
-        });
+        const msg = err?.error?.message ?? res.statusText;
+        if (res.status >= 500 && attempt < maxRetries) {
+          throw new Error(`API 错误: ${msg}`);
+        }
+        send({ model: config.key, content: `API 错误: ${msg}`, done: false });
         send({ model: config.key, content: "", done: true });
         return;
       }
@@ -135,7 +156,6 @@ function streamAPI(
                 const parsed = JSON.parse(data);
                 if (parsed?.error) break;
 
-                // OpenAI 格式: choices[0].delta.content；火山方舟等: delta.content
                 const content =
                   parsed?.choices?.[0]?.delta?.content ??
                   parsed?.delta?.content;
@@ -153,22 +173,24 @@ function streamAPI(
       }
 
       send({ model: config.key, content: "", done: true });
-    })
-    .catch((err) => {
+    } catch (err) {
       clearTimeout(timeoutId);
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        return runWithRetry(attempt + 1);
+      }
       const msg =
-        err?.name === "AbortError"
+        err && typeof err === "object" && "name" in err && (err as Error).name === "AbortError"
           ? "请求超时（45秒），请检查网络或 API 配置"
           : err instanceof Error
             ? err.message
-            : String(err);
-      send({
-        model: config.key,
-        content: `请求失败: ${msg}`,
-        done: false,
-      });
+            : String(err ?? "未知错误");
+      send({ model: config.key, content: `请求失败: ${msg}`, done: false });
       send({ model: config.key, content: "", done: true });
-    });
+    }
+  };
+
+  return runWithRetry(0);
 }
 
 export async function POST(request: NextRequest) {
